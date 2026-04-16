@@ -1,0 +1,186 @@
+index.html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Student Results</title>
+    <style>
+        body { font-family: sans-serif; background-color: #f4f4f9; display: flex; justify-content: center; }
+        table { border-collapse: collapse; width: 60%; margin-top: 50px; background: white; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #4CAF50; color: white; }
+    </style>
+</head>
+<body>
+    <table>
+        <tr><th>Student Name</th><th>Subject</th><th>Score</th><th>Status</th></tr>
+        <tr><td>Alex Johnson</td><td>Mathematics</td><td>85</td><td>Pass</td></tr>
+        <tr><td>Maria Garcia</td><td>Science</td><td>92</td><td>Pass</td></tr>
+    </table>
+</body>
+</html>
+
+Deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: student-results-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: student-results
+  template:
+    metadata:
+      labels:
+        app: student-results
+    spec:
+      containers:
+      - name: student-results-container
+        image: yashmitha05/html-demo:latest 
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: student-results-service
+spec:
+  type: NodePort
+  selector:
+    app: student-results
+  ports:
+    - port: 80
+      targetPort: 80 
+      nodePort: 32765
+
+Dockerfile
+FROM nginx:latest 
+COPY index.html /usr/share/nginx/html/index.html 
+EXPOSE 80
+
+Pipeline Script
+
+pipeline {
+    agent any
+
+    environment {
+        DOCKER_IMAGE = "yashmitha05/html-demo:latest"
+        DOCKER_HUB_CREDENTIALS = "docker-credentials-id"
+        KUBECONFIG_CREDENTIALS = "kubeconfig-id"
+    }
+
+    stages {
+
+        stage('Clone Code') {
+            steps {
+                git branch: 'main', url: 'https://github.com/Yashmitha-05/Student-marks.git'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh 'docker build -t $DOCKER_IMAGE .'
+            }
+        }
+
+        stage('Login to Docker Hub') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: "${DOCKER_HUB_CREDENTIALS}",
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
+                }
+            }
+        }
+
+        stage('Push Docker Image') {
+            steps {
+                sh 'docker push $DOCKER_IMAGE'
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                withCredentials([file(credentialsId: "${KUBECONFIG_CREDENTIALS}", variable: 'KUBECONFIG')]) {
+                    sh 'kubectl apply -f deployment.yaml'
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Deployment Successful 🚀'
+        }
+        failure {
+            echo 'Something went wrong ❌'
+        }
+    }
+}
+
+
+
+linux
+windows
+pipeline {
+    agent any
+
+    environment {
+        DOCKER_IMAGE = "yashmitha05/html-demo:latest"
+        DOCKER_HUB_CREDENTIALS = "docker-credentials-id"
+        KUBECONFIG_CREDENTIALS = "kubeconfig-id"
+    }
+
+    stages {
+
+        stage('Clone Code') {
+            steps {
+                git branch: 'main', url: 'https://github.com/Yashmitha-05/Student-marks.git'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                bat 'docker build -t %DOCKER_IMAGE% .'
+            }
+        }
+
+        stage('Login to Docker Hub') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: "${DOCKER_HUB_CREDENTIALS}",
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    bat 'echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin'
+                }
+            }
+        }
+
+        stage('Push Docker Image') {
+            steps {
+                bat 'docker push %DOCKER_IMAGE%'
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                withCredentials([file(credentialsId: "${KUBECONFIG_CREDENTIALS}", variable: 'KUBECONFIG')]) {
+                    bat 'kubectl apply -f deployment.yaml'
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Deployment Successful 🚀'
+        }
+        failure {
+            echo 'Something went wrong ❌'
+        }
+    }
+}
