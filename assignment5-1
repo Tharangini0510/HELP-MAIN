@@ -1,0 +1,146 @@
+Phase 1: Local Development (Maven & Java)
+First, you must create a Maven directory structure in Visual Studio Code.
+
+1. Project Structure
+Your folder should look like this:
+src/main/java/com/devops/App.java (Main Logic)
+src/test/java/com/devops/AppTest.java (JUnit Tests)
+pom.xml (Dependencies)
+
+2. The Java Logic
+Subdivision 1a: Logic Operations
+File: LogicOps.java
+package com.devops;
+public class LogicOps {
+    public boolean performAND(boolean a, boolean b) { return a && b; }
+    public boolean performOR(boolean a, boolean b) { return a || b; }
+    public boolean performNOT(boolean a) { return !a; }
+}
+Subdivision 1b: Even and Odd Numbers
+File: EvenOdd.java
+package com.devops;
+public class EvenOdd {
+    public String check(int n) {
+        return (n % 2 == 0) ? "Even" : "Odd";
+    }
+}
+Subdivision 1c & 1d: Socket Programming & Transmission
+File: SocketHandler.java
+package com.devops;
+import java.io.*;
+import java.net.*;
+
+public class SocketHandler {
+    public void startCommunication(int port) throws Exception {
+        // Server side (1c)
+        ServerSocket server = new ServerSocket(port);
+        System.out.println("Server started on port " + port);
+
+        // Client side (1d) - Sending message to the port
+        Socket client = new Socket("localhost", port);
+        PrintWriter out = new PrintWriter(client.getOutputStream(), true);
+        out.println("Lab Task 1d: Message Transmitted");
+
+        // Server receives
+        Socket receiver = server.accept();
+        BufferedReader in = new BufferedReader(new InputStreamReader(receiver.getInputStream()));
+        System.out.println("Received: " + in.readLine());
+        
+        client.close();
+        server.close();
+    }
+}
+Subdivision 1e: Arithmetic Operations
+File: ArithmeticOps.java
+package com.devops;
+public class ArithmeticOps {
+    public int add(int a, int b) { return a + b; }
+    public int subtract(int a, int b) { return a - b; }
+    public int multiply(int a, int b) { return a * b; }
+    public double divide(int a, int b) { return (double) a / b; }
+}
+
+3. Junit Tests
+src/test/java/com/devops/AppTest.java
+package com.devops;
+import static org.junit.Assert.*;
+import org.junit.Test;
+
+public class AppTest {
+    @Test
+    public void test1a_Logic() {
+        LogicOps ops = new LogicOps();
+        assertTrue(ops.performAND(true, true));
+    }
+
+    @Test
+    public void test1b_EvenOdd() {
+        EvenOdd eo = new EvenOdd();
+        assertEquals("Even", eo.check(4));
+    }
+
+    @Test
+    public void test1e_Arithmetic() {
+        ArithmeticOps math = new ArithmeticOps();
+        assertEquals(10, math.add(5, 5));
+    }
+}
+
+4. Dockerfile
+# Use Maven to build the app
+FROM maven:3.8.4-openjdk-17 AS build
+COPY . /app
+WORKDIR /app
+RUN mvn clean package
+# Use OpenJDK to run the app
+FROM openjdk:17-jdk-slim
+COPY --from=build /app/target/*.jar app.jar
+ENTRYPOINT ["java", "-jar", "/app.jar"]
+
+5. Jenkinsfile - pipeline script
+pipeline {
+    agent any
+    stages {
+        stage('Checkout') {
+            steps {
+                // Replace with your actual GitHub URL
+                git 'https://github.com/your-username/your-repo.git' [cite: 5]
+            }
+        }
+        stage('Build & Test') {
+            steps {
+                sh 'mvn clean test' [cite: 4]
+            }
+        }
+        stage('Docker Build') {
+            steps {
+                sh 'docker build -t java-devops-app .' [cite: 8]
+            }
+        }
+    }
+}
+
+6. pom.xml
+<project xmlns="http://maven.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.devops</groupId>
+  <artifactId>devops-lab-q1</artifactId>
+  <packaging>jar</packaging>
+  <version>1.0-SNAPSHOT</version>
+  <name>devops-lab-q1</name>
+
+  <properties>
+    <maven.compiler.source>17</maven.compiler.source>
+    <maven.compiler.target>17</maven.compiler.target>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.13.2</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+</project>
