@@ -1,0 +1,131 @@
+Dockerfile
+FROM node:18
+WORKDIR /app
+COPY package.json .
+RUN npm install
+COPY . .
+EXPOSE 3000
+CMD ["node", "app.js"]
+
+app.js
+const express = require('express');
+const app = express();
+app.get('/', (req, res) => {
+    res.send('Node.js App is Running 🚀');
+});
+app.listen(3000, () => {
+    console.log('Server running on port 3000');
+});
+
+deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: node-app
+  template:
+    metadata:
+      labels:
+        app: node-app
+    spec:
+      containers:
+      - name: node-container
+        image: yashmitha05/node-app:latest
+        ports:
+        - containerPort: 3000
+
+package.json
+{
+  "name": "node-app",
+  "version": "1.0.0",
+  "main": "app.js",
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}
+
+script
+pipeline {
+    agent any
+
+    environment {
+        DOCKER_IMAGE = "yashmitha05/node-app"
+    }
+
+    stages {
+
+        stage('Clone Code') {
+            steps {
+                git branch: 'main', url: 'https://github.com/YOUR-REPO/node-app.git'
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                sh 'npm install'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh 'docker build -t $DOCKER_IMAGE .'
+            }
+        }
+
+        stage('Docker Login') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'docker-credentials-id',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
+                }
+            }
+        }
+
+        stage('Push to DockerHub') {
+            steps {
+                sh 'docker push $DOCKER_IMAGE'
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                withCredentials([file(
+                    credentialsId: 'kubeconfig-id',
+                    variable: 'KUBECONFIG'
+                )]) {
+                    sh 'kubectl apply -f deployment.yaml'
+                    sh 'kubectl apply -f service.yaml'
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Deployment Successful 🚀'
+        }
+        failure {
+            echo 'Something went wrong ❌'
+        }
+    }
+}
+
+service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: node-service
+spec:
+  type: NodePort
+  selector:
+    app: node-app
+  ports:
+    - port: 80
+      targetPort: 3000
