@@ -1,0 +1,149 @@
+package com.example;
+
+public class LogicOperations {
+
+    public static boolean andOp(boolean a, boolean b) {
+        return a && b;
+    }
+
+    public static boolean orOp(boolean a, boolean b) {
+        return a || b;
+    }
+
+    public static boolean notOp(boolean a) {
+        return !a;
+    }
+}
+
+
+package com.example;
+
+public class EvenOdd {
+
+    public static String check(int num) {
+        if (num % 2 == 0)
+            return "Even";
+        else
+            return "Odd";
+    }
+}
+
+package com.example;
+
+public class Arithmetic {
+
+    public static int add(int a, int b) {
+        return a + b;
+    }
+
+    public static int sub(int a, int b) {
+        return a - b;
+    }
+
+    public static int mul(int a, int b) {
+        return a * b;
+    }
+
+    public static int div(int a, int b) {
+        return a / b;
+    }
+}
+
+
+package com.example;
+
+import java.io.*;
+import java.net.*;
+
+public class SocketClient {
+
+    public static String sendMessage(String msg) throws Exception {
+        Socket socket = new Socket("localhost", 5000);
+
+        BufferedReader in = new BufferedReader(
+                new InputStreamReader(socket.getInputStream()));
+        PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+
+        out.println(msg);
+        String response = in.readLine();
+
+        socket.close();
+        return response;
+    }
+}
+
+
+package com.example;
+
+import org.junit.Test;
+import static org.junit.Assert.*;
+
+public class ArithmeticTest {
+
+    @Test
+    public void testAdd() {
+        assertEquals(5, Arithmetic.add(2, 3));
+    }
+
+    @Test
+    public void testSub() {
+        assertEquals(1, Arithmetic.sub(3, 2));
+    }
+
+    @Test
+    public void testMul() {
+        assertEquals(6, Arithmetic.mul(2, 3));
+    }
+
+    @Test
+    public void testDiv() {
+        assertEquals(2, Arithmetic.div(4, 2));
+    }
+}
+
+
+package com.example;
+
+import org.junit.Test;
+import static org.junit.Assert.*;
+
+public class EvenOddTest {
+
+    @Test
+    public void testEven() {
+        assertEquals("Even", EvenOdd.check(2));
+    }
+
+    @Test
+    public void testOdd() {
+        assertEquals("Odd", EvenOdd.check(3));
+    }
+}
+
+
+
+package com.example;
+
+import org.junit.Test;
+import static org.junit.Assert.*;
+
+public class LogicOperationsTest {
+
+    @Test
+    public void testAnd() {
+        assertTrue(LogicOperations.andOp(true, true));
+        assertFalse(LogicOperations.andOp(true, false));
+    }
+
+    @Test
+    public void testOr() {
+        assertTrue(LogicOperations.orOp(true, false));
+        assertFalse(LogicOperations.orOp(false, false));
+    }
+
+    @Test
+    public void testNot() {
+        assertTrue(LogicOperations.notOp(false));
+        assertFalse(LogicOperations.notOp(true));
+    }
+}
