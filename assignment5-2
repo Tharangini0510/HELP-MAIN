@@ -1,0 +1,133 @@
+Step 1: Create the Static Web Page
+In Visual Studio Code, create an index.html file that contains the "Conference information and its full details".
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Tech Conference 2026</title>
+</head>
+<body>
+    <h1>Global DevOps & AI Conference</h1>
+    <p><strong>Date:</strong> November 15-17, 2026</p>
+    <p><strong>Venue:</strong> Silicon Hall, San Francisco</p>
+    <h3>Full Details:</h3>
+    <ul>
+        <li>Keynote: The Future of Kubernetes</li>
+        <li>Workshop: Advanced CI/CD with Jenkins</li>
+        <li>Networking Dinner at 7:00 PM</li>
+    </ul>
+</body>
+</html>
+
+Step 2: Create the Dockerfile
+This file tells Docker how to package your web page into an image. We will use nginx, a lightweight web server, to host your HTML file.
+# Use a lightweight web server image
+FROM nginx:alpine
+
+# Copy your HTML file to the default web server directory
+COPY index.html /usr/share/nginx/html/index.html
+
+# Expose port 80
+EXPOSE 80
+
+Step 3: Define Kubernetes Deployment & Service
+Create a deployment.yaml file. This tells Kubernetes how many copies (replicas) of your app to run and which port to open (NodePort) for visualization.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: conference-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: conference
+  template:
+    metadata:
+      labels:
+        app: conference
+    spec:
+      containers:
+      - name: conference-container
+        image: tharangini0510/springboot-app:latest # Match your DockerHub image
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: conference-service
+spec:
+  type: NodePort
+  selector:
+    app: conference
+  ports:
+    - port: 80
+      targetPort: 80
+      nodePort: 30007 # Visualize your deployment here
+
+Step 4: Update Jenkins Pipeline
+Your pipeline must now include the Deployment stage. Use the withCredentials block to handle your Kubernetes authentication safely.
+pipeline {
+    agent any
+
+    environment {
+        // Change this to your DockerHub username/repository
+        DOCKER_IMAGE = "tharangini0510/conference-app"
+    }
+
+    stages {
+        stage('Clone Code') {
+            steps {
+                // Clones your repository containing index.html, Dockerfile, and K8s YAMLs 
+                git branch: 'main', url: 'https://github.com/Tharangini0510/SpringBoot.git'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                // Packages your static web page into an Nginx container 
+                bat 'docker build -t %DOCKER_IMAGE% .'
+            }
+        }
+
+        stage('Push to DockerHub') {
+            steps {
+                // Resolves "Credentials not found" by using the 'dockerhub' ID you created [cite: 9]
+                withCredentials([usernamePassword(credentialsId: 'dockerhub', 
+                                 usernameVariable: 'USER', passwordVariable: 'PASS')]) {
+                    bat "docker login -u %USER% -p %PASS%"
+                    bat 'docker push %DOCKER_IMAGE%'
+                }
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                // Resolves "Authentication required" by using the 'kuberconfig' Secret File 
+                withCredentials([file(credentialsId: 'kuberconfig', variable: 'KUBECONFIG')]) {
+                    bat """
+                    set KUBECONFIG=%KUBECONFIG% && kubectl apply -f deployment.yaml --validate=false
+                    set KUBECONFIG=%KUBECONFIG% && kubectl apply -f service.yaml --validate=false
+                    """
+                }
+            }
+        }
+    }
+}
+
+Add service.yaml file
+apiVersion: v1
+kind: Service
+metadata:
+  name: conference-service
+spec:
+  type: NodePort
+  selector:
+    app: conference # Must match the label in your deployment.yaml
+  ports:
+    - port: 80
+      targetPort: 80
+      # Use 30008 or higher since 30007 is already allocated
+      nodePort: 30008
+
+Verification: You will show the Stage View in Jenkins and then open http://localhost:30007 to display the live conference web page.
